@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ubeka AI — Skin Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Variables ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --clay:       #2d1a0e;
+      --bark:       #4a2e1a;
+      --terra:      #c4623a;
+      --terra-soft: #d4845c;
+      --terra-pale: #f0c4a8;
+      --cream:      #fdf6ed;
+      --gold:       #c9a84c;
+      --gold-soft:  #e8d5a0;
+      --sand:       #e8d5c0;
+      --muted:      #8a6a55;
+      --white:      #ffffff;
+
+      --r-sm:  8px;
+      --r-md:  16px;
+      --r-lg:  24px;
+      --r-xl:  40px;
+      --r-pill:100px;
+
+      --shadow-soft: 0 4px 24px rgba(45,26,14,0.10);
+      --shadow-lift: 0 12px 48px rgba(45,26,14,0.18);
+      --shadow-card: 0 2px 12px rgba(45,26,14,0.08);
+
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--clay);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background texture ─────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(196,98,58,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 90% 80%, rgba(201,168,76,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    header {
+      padding: 48px 0 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-mark {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--terra), var(--gold));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+      box-shadow: 0 4px 20px rgba(196,98,58,0.35);
+    }
+
+    .logo-mark svg { width: 26px; height: 26px; fill: var(--white); }
+
+    header h1 {
+      font-family: 'Cormorant Garant', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--clay);
+    }
+
+    header h1 span { color: var(--terra); font-style: italic; }
+
+    header p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── Divider ────────────────────────────────────────────────────── */
+    .divider {
+      width: 60px;
+      height: 1.5px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 4px auto;
+    }
+
+    /* ── Tab bar ────────────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex;
+      background: var(--white);
+      border-radius: var(--r-pill);
+      padding: 4px;
+      gap: 4px;
+      margin: 24px 0 28px;
+      box-shadow: var(--shadow-card);
+      width: fit-content;
+      align-self: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .tab-btn {
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--r-pill);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s var(--ease-out);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .tab-btn svg { width: 16px; height: 16px; }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--terra), #b8522a);
+      color: var(--white);
+      box-shadow: 0 4px 16px rgba(196,98,58,0.40);
+    }
+
+    .tab-btn:not(.active):hover {
+      background: var(--sand);
+      color: var(--clay);
+    }
+
+    /* ── Upload Section ─────────────────────────────────────────────── */
+    #upload-section, #camera-section { display: none; }
+    #upload-section.active, #camera-section.active { display: block; }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--sand);
+      border-radius: var(--r-xl);
+      padding: 56px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-out);
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .drop-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(196,98,58,0.03), rgba(201,168,76,0.03));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .drop-zone:hover::before, .drop-zone.drag-over::before { opacity: 1; }
+
+    .drop-zone.drag-over {
+      border-color: var(--terra);
+      border-style: solid;
+      transform: scale(1.01);
+      box-shadow: var(--shadow-lift), 0 0 0 4px rgba(196,98,58,0.10);
+    }
+
+    .drop-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--terra-pale), var(--gold-soft));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      transition: transform 0.3s var(--ease-spring);
+    }
+
+    .drop-zone:hover .drop-icon { transform: translateY(-4px) scale(1.05); }
+    .drop-icon svg { width: 28px; height: 28px; stroke: var(--terra); fill: none; }
+
+    .drop-zone h3 {
+      font-family: 'Cormorant Garant', serif;
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: var(--clay);
+      margin-bottom: 8px;
+    }
+
+    .drop-zone p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .drop-zone p strong {
+      color: var(--terra);
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      transition: text-decoration-color 0.2s;
+    }
+
+    .drop-zone p strong:hover { text-decoration-color: var(--terra); }
+
+    #file-input { display: none; }
+
+    .drop-meta {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .drop-meta-dot {
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: var(--sand);
+    }
+
+    /* ── Image Queue ────────────────────────────────────────────────── */
+    .queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 28px 0 14px;
+    }
+
+    .queue-header h4 {
+      font-family: 'Cormorant Garant', serif;
+      font-size: 1.15rem;
+      font-weight: 500;
+      color: var(--clay);
+    }
+
+    .queue-header span {
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: var(--sand);
+      padding: 3px 10px;
+      border-radius: var(--r-pill);
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .image-card {
+      position: relative;
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: var(--sand);
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+      animation: card-in 0.4s var(--ease-spring) both;
+    }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: scale(0.85) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .image-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s var(--ease-out);
+    }
+
+    .image-card:hover img { transform: scale(1.04); }
+
+    .image-card .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(45,26,14,0.75) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 12px;
+    }
+
+    .image-card:hover .card-overlay { opacity: 1; }
+
+    .card-remove {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 26px;
+      height: 26px;
+      background: rgba(45,26,14,0.7);
+      border: none;
+      border-radius: 50%;
+      color: var(--cream);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.2s;
+      backdrop-filter: blur(4px);
+      z-index: 2;
+    }
+
+    .image-card:hover .card-remove { opacity: 1; }
+    .card-remove:hover { background: rgba(196,98,58,0.9); transform: scale(1.1); }
+
+    /* Result badge on card */
+    .card-result-badge {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      background: rgba(45,26,14,0.85);
+      border-radius: var(--r-sm);
+      padding: 6px 8px;
+      backdrop-filter: blur(8px);
+      display: none;
+      animation: badge-in 0.3s var(--ease-spring);
+    }
+
+    @keyframes badge-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-result-badge.visible { display: block; }
+
+    .badge-severity {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--terra-pale);
+    }
+
+    .badge-conf {
+      font-size: 0.7rem;
+      color: var(--sand);
+      margin-top: 1px;
+    }
+
+    .badge-spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: var(--terra-pale);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 2px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Analyze Button ─────────────────────────────────────────────── */
+    .analyze-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-analyze {
+      flex: 1;
+      min-width: 180px;
+      padding: 16px 32px;
+      background: linear-gradient(135deg, var(--terra) 0%, #b8522a 100%);
+      color: var(--white);
+      border: none;
+      border-radius: var(--r-pill);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-spring);
+      box-shadow: 0 6px 24px rgba(196,98,58,0.40);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-analyze:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 36px rgba(196,98,58,0.50);
+    }
+
+    .btn-analyze:active:not(:disabled) { transform: translateY(0); }
+
+    .btn-analyze:disabled {
+      background: var(--sand);
+      color: var(--muted);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .btn-clear {
+      padding: 16px 20px;
+      background: var(--white);
+      color: var(--muted);
+      border: 1.5px solid var(--sand);
+      border-radius: var(--r-pill);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:hover { border-color: var(--terra); color: var(--terra); background: rgba(196,98,58,0.04); }
+
+    /* ── Camera Section ─────────────────────────────────────────────── */
+    .camera-wrap {
+      background: var(--white);
+      border-radius: var(--r-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+    }
+
+    .camera-viewfinder {
+      position: relative;
+      background: #1a0e08;
+      aspect-ratio: 4/3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #camera-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #camera-canvas { display: none; }
+
+    /* Camera overlay guide */
+    .cam-guide {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cam-guide-oval {
+      width: 55%;
+      aspect-ratio: 3/4;
+      border: 2px solid rgba(201,168,76,0.5);
+      border-radius: 50%;
+      box-shadow: 0 0 0 9999px rgba(10,5,2,0.35);
+    }
+
+    .cam-label {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(45,26,14,0.65);
+      color: var(--gold-soft);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: var(--r-pill);
+      backdrop-filter: blur(8px);
+      white-space: nowrap;
+    }
+
+    /* Camera placeholder (before stream) */
+    .cam-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: rgba(253,246,237,0.5);
+    }
+
+    .cam-placeholder svg { width: 48px; height: 48px; stroke: currentColor; fill: none; }
+    .cam-placeholder p { font-size: 0.875rem; }
+
+    /* Camera controls */
+    .camera-controls {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: var(--white);
+    }
+
+    .btn-cam-action {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s var(--ease-spring);
+    }
+
+    .btn-cam-action svg { width: 20px; height: 20px; }
+
+    .btn-cam-start {
+      background: var(--terra);
+      color: var(--white);
+      box-shadow: 0 4px 16px rgba(196,98,58,0.40);
+      width: 60px; height: 60px;
+    }
+
+    .btn-cam-start svg { width: 26px; height: 26px; stroke: var(--white); fill: none; }
+    .btn-cam-start:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(196,98,58,0.5); }
+
+    .btn-shutter {
+      width: 72px; height: 72px;
+      background: var(--white);
+      border: 4px solid var(--terra);
+      box-shadow: 0 0 0 3px rgba(196,98,58,0.15);
+      position: relative;
+    }
+
+    .btn-shutter::after {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--terra), var(--gold));
+      transition: transform 0.15s var(--ease-spring);
+    }
+
+    .btn-shutter:hover::after { transform: scale(0.92); }
+    .btn-shutter:active::after { transform: scale(0.82); }
+
+    .btn-flip {
+      background: var(--sand);
+      color: var(--clay);
+    }
+
+    .btn-flip svg { stroke: var(--clay); fill: none; }
+    .btn-flip:hover { background: var(--terra-pale); transform: scale(1.05); }
+
+    .btn-cam-stop {
+      background: rgba(196,98,58,0.12);
+      color: var(--terra);
+    }
+
+    .btn-cam-stop svg { stroke: var(--terra); fill: none; }
+    .btn-cam-stop:hover { background: rgba(196,98,58,0.22); }
+
+    /* Flash animation */
+    .cam-flash {
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+    }
+
+    .cam-flash.flash { animation: do-flash 0.4s ease-out forwards; }
+    @keyframes do-flash {
+      0%   { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+
+    /* Camera captured strip */
+    .captured-strip {
+      display: flex;
+      gap: 8px;
+      padding: 0 24px 20px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .captured-strip::-webkit-scrollbar { display: none; }
+
+    .captured-thumb {
+      flex-shrink: 0;
+      width: 72px;
+      height: 72px;
+      border-radius: var(--r-md);
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+      animation: card-in 0.3s var(--ease-spring);
+    }
+
+    .captured-thumb:hover { border-color: var(--terra); transform: scale(1.05); }
+
+    /* ── Results Panel ───────────────────────────────────────────────── */
+    .results-section {
+      margin-top: 36px;
+      animation: section-in 0.5s var(--ease-out) both;
+    }
+
+    @keyframes section-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-header {
+      font-family: 'Cormorant Garant', serif;
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: var(--clay);
+      margin-bottom: 6px;
+    }
+
+    .results-subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    /* Summary card */
+    .summary-card {
+      background: linear-gradient(135deg, var(--clay) 0%, var(--bark) 100%);
+      border-radius: var(--r-xl);
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      color: var(--cream);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .summary-stat { text-align: center; }
+
+    .summary-stat .stat-num {
+      font-family: 'Cormorant Garant', serif;
+      font-size: 2.2rem;
+      font-weight: 300;
+      color: var(--gold-soft);
+      line-height: 1;
+    }
+
+    .summary-stat .stat-label {
+      font-size: 0.72rem;
+      color: rgba(253,246,237,0.55);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    .summary-divider {
+      width: 1px;
+      background: rgba(253,246,237,0.12);
+      align-self: stretch;
+    }
+
+    /* Individual result card */
+    .result-card {
+      background: var(--white);
+      border-radius: var(--r-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      min-height: 140px;
+      animation: card-in 0.4s var(--ease-spring) both;
+      transition: box-shadow 0.3s, transform 0.3s var(--ease-spring);
+    }
+
+    .result-card:hover {
+      box-shadow: var(--shadow-lift);
+      transform: translateY(-2px);
+    }
+
+    .result-image {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .result-image .severity-ribbon {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 6px 10px;
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--white);
+    }
+
+    .result-body {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .result-filename {
+      font-size: 0.78rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-severity {
+      font-family: 'Cormorant Garant', serif;
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--clay);
+      text-transform: capitalize;
+      line-height: 1;
+    }
+
+    /* Confidence bar */
+    .conf-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+    }
+
+    .conf-bar-track {
+      flex: 1;
+      height: 5px;
+      background: var(--sand);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .conf-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s var(--ease-out);
+      background: linear-gradient(90deg, var(--terra), var(--gold));
+    }
+
+    .conf-pct {
+      font-weight: 600;
+      color: var(--terra);
+      min-width: 38px;
+      text-align: right;
+    }
+
+    /* Prob breakdown */
+    .prob-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .prob-item {
+      text-align: center;
+      background: var(--cream);
+      border-radius: var(--r-sm);
+      padding: 6px 4px;
+    }
+
+    .prob-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .prob-val {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--clay);
+      margin-top: 2px;
+    }
+
+    .prob-item.dominant {
+      background: rgba(196,98,58,0.08);
+      border: 1px solid rgba(196,98,58,0.2);
+    }
+
+    .prob-item.dominant .prob-label { color: var(--terra); }
+    .prob-item.dominant .prob-val   { color: var(--terra); }
+
+    /* Uncertainty badge */
+    .uncertain-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      color: #b45309;
+      background: rgba(180,83,9,0.08);
+      border: 1px solid rgba(180,83,9,0.2);
+      border-radius: var(--r-pill);
+      padding: 3px 10px;
+      margin-top: 2px;
+    }
+
+    /* Error state */
+    .result-error {
+      padding: 20px 24px;
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #c0392b;
+      font-size: 0.875rem;
+    }
+
+    /* Severity colors */
+    .sev-clear    { background: #2d6a4f; }
+    .sev-mild     { background: #b7950b; }
+    .sev-moderate { background: #c4623a; }
+    .sev-severe   { background: #c0392b; }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--sand) 25%, var(--cream) 50%, var(--sand) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Notifications ───────────────────────────────────────────────── */
+    .toast-stack {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--clay);
+      color: var(--cream);
+      padding: 12px 18px;
+      border-radius: var(--r-md);
+      font-size: 0.875rem;
+      box-shadow: var(--shadow-lift);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+      animation: toast-in 0.35s var(--ease-spring) both;
+      max-width: 320px;
+    }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .toast.toast-error { background: #c0392b; }
+    .toast.toast-success { background: #2d6a4f; }
+    .toast-icon { flex-shrink: 0; font-size: 1rem; }
+
+    /* ── Progress bar (global) ───────────────────────────────────────── */
+    .progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--terra), var(--gold));
+      z-index: 10000;
+      transition: width 0.3s var(--ease-out), opacity 0.3s;
+      opacity: 0;
+      width: 0%;
+    }
+
+    .progress-bar.active { opacity: 1; }
+
+    /* ── Responsive ──────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      header { padding: 32px 0 20px; }
+
+      .tab-btn { padding: 9px 16px; font-size: 0.8rem; }
+
+      .drop-zone { padding: 40px 20px; border-radius: var(--r-xl); }
+
+      .image-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+
+      .summary-card { grid-template-columns: 1fr; text-align: center; gap: 12px; }
+      .summary-divider { display: none; }
+
+      .result-card { grid-template-columns: 110px 1fr; }
+      .result-body { padding: 14px 16px; }
+      .result-severity { font-size: 1.3rem; }
+
+      .prob-grid { grid-template-columns: repeat(2, 1fr); }
+
+      .toast-stack { left: 12px; right: 12px; bottom: 16px; }
+    }
+
+    @media (max-width: 400px) {
+      .result-card { grid-template-columns: 1fr; }
+      .result-image { aspect-ratio: 16/7; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progress-bar"></div>
+  <!-- Toast stack -->
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <div class="page-wrap">
+
+    <!-- Header -->
+    <header>
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" opacity="0"/>
+          <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 3c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm4 12H8v-1.5c0-1.33 2.67-2 4-2s4 .67 4 2V17z"/>
+        </svg>
+      </div>
+      <h1>Ubeka <span>AI</span></h1>
+      <div class="divider"></div>
+      <p>Skin Analysis for African Skin</p>
+    </header>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-upload" onclick="switchTab('upload')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Upload Images
+      </button>
+      <button class="tab-btn" id="tab-camera" onclick="switchTab('camera')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Camera
+      </button>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="upload-section" class="active">
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <h3>Drop your images here</h3>
+        <p>or <strong onclick="event.stopPropagation(); document.getElementById('file-input').click()">browse files</strong> from your device</p>
+        <div class="drop-meta">
+          <span>JPG, PNG, WEBP</span>
+          <div class="drop-meta-dot"></div>
+          <span>Up to 10 images</span>
+          <div class="drop-meta-dot"></div>
+          <span>Max 10 MB each</span>
+        </div>
+      </div>
+
+      <input type="file" id="file-input" accept="image/*" multiple
+             onchange="handleFileSelect(event)" />
+
+      <!-- Queue -->
+      <div id="queue-area" style="display:none">
+        <div class="queue-header">
+          <h4>Selected Images</h4>
+          <span id="queue-count">0 images</span>
+        </div>
+        <div class="image-grid" id="image-grid"></div>
+
+        <div class="analyze-row">
+          <button class="btn-analyze" id="analyze-btn" onclick="analyzeAll()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            Analyze All
+          </button>
+          <button class="btn-clear" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera Section -->
+    <div id="camera-section">
+      <div class="camera-wrap">
+        <div class="camera-viewfinder">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <canvas id="camera-canvas"></canvas>
+          <div class="cam-placeholder" id="cam-placeholder">
+            <svg viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+            <p>Tap Start Camera to begin</p>
+          </div>
+          <div class="cam-guide" id="cam-guide" style="display:none">
+            <div class="cam-guide-oval"></div>
+          </div>
+          <div class="cam-label" id="cam-label" style="display:none">
+            Position face within the oval
+          </div>
+          <div class="cam-flash" id="cam-flash"></div>
+        </div>
+
+        <div class="camera-controls">
+          <!-- Before stream -->
+          <div id="cam-controls-start">
+            <button class="btn-cam-action btn-cam-start" onclick="startCamera()" title="Start Camera">
+              <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+            </button>
+          </div>
+
+          <!-- During stream -->
+          <div id="cam-controls-live" style="display:none; gap:16px; align-items:center; display:none;">
+            <button class="btn-cam-action btn-flip" onclick="flipCamera()" title="Flip Camera">
+              <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+            <button class="btn-cam-action btn-shutter" onclick="capturePhoto()" title="Capture"></button>
+            <button class="btn-cam-action btn-cam-stop" onclick="stopCamera()" title="Stop Camera">
+              <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" stroke-width="2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Captured strip -->
+        <div class="captured-strip" id="captured-strip"></div>
+
+        <!-- Analyze captured -->
+        <div id="cam-analyze-row" style="display:none; padding:0 24px 24px;">
+          <div class="analyze-row">
+            <button class="btn-analyze" id="cam-analyze-btn" onclick="analyzeCaptured()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              Analyze Captures
+            </button>
+            <button class="btn-clear" onclick="clearCaptured()">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results section -->
+    <div class="results-section" id="results-section" style="display:none">
+      <div class="results-header">Analysis Results</div>
+      <div class="results-subtitle" id="results-subtitle"></div>
+
+      <!-- Summary card -->
+      <div class="summary-card" id="summary-card">
+        <div class="summary-stat">
+          <div class="stat-num" id="sum-total">—</div>
+          <div class="stat-label">Images Analysed</div>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-stat">
+          <div class="stat-num" id="sum-avg-conf">—</div>
+          <div class="stat-label">Avg Confidence</div>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-stat">
+          <div class="stat-num" id="sum-dominant">—</div>
+          <div class="stat-label">Most Common</div>
+        </div>
+      </div>
+
+      <!-- Per-image results -->
+      <div id="result-cards"></div>
+    </div>
+
+  </div><!-- /page-wrap -->
+
+  <script>
+    const API_URL = 'http://127.0.0.1:8000/analyze';
+
+    /* ── State ──────────────────────────────────────────────────────── */
+    let uploadedFiles  = [];   // { file, url, id }
+    let capturedPhotos = [];   // { blob, url, id }
+    let stream         = null;
+    let facingMode     = 'user';
+    let analysisResults = [];
+
+    let idCounter = 0;
+    const nextId  = () => ++idCounter;
+
+    /* ── Progress bar ───────────────────────────────────────────────── */
+    const progressBar = document.getElementById('progress-bar');
+    let progressValue = 0;
+    let progressTimer = null;
+
+    function startProgress() {
+      progressValue = 0;
+      progressBar.style.width = '0%';
+      progressBar.classList.add('active');
+      progressTimer = setInterval(() => {
+        if (progressValue < 85) {
+          progressValue += Math.random() * 8;
+          progressBar.style.width = Math.min(85, progressValue) + '%';
+        }
+      }, 200);
+    }
+
+    function finishProgress() {
+      clearInterval(progressTimer);
+      progressBar.style.width = '100%';
+      setTimeout(() => {
+        progressBar.classList.remove('active');
+        progressBar.style.width = '0%';
+      }, 500);
+    }
+
+    /* ── Toasts ─────────────────────────────────────────────────────── */
+    function toast(msg, type = '') {
+      const stack = document.getElementById('toast-stack');
+      const el    = document.createElement('div');
+      const icon  = type === 'error' ? '⚠️' : type === 'success' ? '✓' : 'ℹ';
+      el.className = `toast ${type ? 'toast-' + type : ''}`;
+      el.innerHTML = `<span class="toast-icon">${icon}</span><span>${msg}</span>`;
+      stack.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)';
+                         setTimeout(() => el.remove(), 300); }, 3500);
+    }
+
+    /* ── Tab switching ───────────────────────────────────────────────── */
+    function switchTab(tab) {
+      document.getElementById('upload-section').classList.toggle('active', tab === 'upload');
+      document.getElementById('camera-section').classList.toggle('active', tab === 'camera');
+      document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+      document.getElementById('tab-camera').classList.toggle('active', tab === 'camera');
+      if (tab !== 'camera' && stream) stopCamera();
+    }
+
+    /* ── Drag & Drop ─────────────────────────────────────────────────── */
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      if (!e.currentTarget.contains(e.relatedTarget))
+        document.getElementById('drop-zone').classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      addFiles([...e.dataTransfer.files]);
+    }
+
+    function handleFileSelect(e) { addFiles([...e.target.files]); }
+
+    /* ── File handling ───────────────────────────────────────────────── */
+    function addFiles(files) {
+      const valid = files.filter(f => {
+        if (!f.type.startsWith('image/'))  { toast(`${f.name}: not an image`, 'error'); return false; }
+        if (f.size > 10 * 1024 * 1024)    { toast(`${f.name}: file too large (max 10 MB)`, 'error'); return false; }
+        return true;
+      });
+
+      if (uploadedFiles.length + valid.length > 10) {
+        toast('Maximum 10 images at a time', 'error');
+        valid.splice(10 - uploadedFiles.length);
+      }
+
+      valid.forEach(f => {
+        const id  = nextId();
+        const url = URL.createObjectURL(f);
+        uploadedFiles.push({ file: f, url, id });
+        addImageCard(id, url, f.name);
+      });
+
+      if (uploadedFiles.length > 0) {
+        document.getElementById('queue-area').style.display = 'block';
+        document.getElementById('queue-count').textContent =
+          uploadedFiles.length + (uploadedFiles.length === 1 ? ' image' : ' images');
+      }
+
+      document.getElementById('file-input').value = '';
+    }
+
+    function addImageCard(id, url, name) {
+      const grid = document.getElementById('image-grid');
+      const card = document.createElement('div');
+      card.className = 'image-card';
+      card.id        = `card-${id}`;
+      card.innerHTML = `
+        <img src="${url}" alt="${name}" loading="lazy" />
+        <button class="card-remove" onclick="removeImage(${id})" title="Remove">✕</button>
+        <div class="card-overlay"></div>
+        <div class="card-result-badge" id="badge-${id}">
+          <div class="badge-spinner"></div>
+        </div>`;
+      grid.appendChild(card);
+    }
+
+    function removeImage(id) {
+      uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+      const card = document.getElementById(`card-${id}`);
+      if (card) { card.style.opacity = '0'; card.style.transform = 'scale(0.8)';
+                  card.style.transition = '0.25s'; setTimeout(() => card.remove(), 250); }
+      const count = document.getElementById('queue-count');
+      if (uploadedFiles.length === 0) {
+        document.getElementById('queue-area').style.display = 'none';
+      } else {
+        count.textContent = uploadedFiles.length + (uploadedFiles.length === 1 ? ' image' : ' images');
+      }
+    }
+
+    function clearAll() {
+      uploadedFiles = [];
+      document.getElementById('image-grid').innerHTML = '';
+      document.getElementById('queue-area').style.display = 'none';
+      document.getElementById('results-section').style.display = 'none';
+      analysisResults = [];
+    }
+
+    /* ── Upload Analysis ─────────────────────────────────────────────── */
+    async function analyzeAll() {
+      if (uploadedFiles.length === 0) { toast('Add at least one image first', 'error'); return; }
+
+      const btn = document.getElementById('analyze-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="badge-spinner" style="width:18px;height:18px;border-color:rgba(255,255,255,0.3);border-top-color:white;"></div> Analyzing…`;
+
+      startProgress();
+      analysisResults = [];
+
+      // Show badge spinners
+      uploadedFiles.forEach(({ id }) => {
+        const badge = document.getElementById(`badge-${id}`);
+        if (badge) { badge.innerHTML = `<div class="badge-spinner"></div>`; badge.classList.add('visible'); }
+      });
+
+      // Analyze sequentially (respects CPU server)
+      for (const { file, url, id, name } of uploadedFiles) {
+        const result = await analyzeOne(file, url, id, file.name);
+        analysisResults.push({ id, url, name: file.name, ...result });
+      }
+
+      finishProgress();
+      renderResults(analysisResults);
+
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        Analyze All`;
+    }
+
+    async function analyzeOne(file, url, id, filename) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res  = await fetch(API_URL, { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.detail || 'Unknown error');
+
+        // Update card badge
+        const badge = document.getElementById(`badge-${id}`);
+        if (badge) {
+          const sev = data.label || data.severity || 'unknown';
+          badge.innerHTML = `
+            <div class="badge-severity">${sev}</div>
+            <div class="badge-conf">${((data.confidence||0)*100).toFixed(0)}% confidence</div>`;
+        }
+        return { ok: true, ...data };
+      } catch (err) {
+        const badge = document.getElementById(`badge-${id}`);
+        if (badge) {
+          badge.innerHTML = `<div class="badge-severity" style="color:#f87171">Error</div>`;
+        }
+        return { ok: false, error: err.message };
+      }
+    }
+
+    /* ── Camera ──────────────────────────────────────────────────────── */
+    async function startCamera() {
+      try {
+        if (stream) { stream.getTracks().forEach(t => t.stop()); }
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        });
+        const video = document.getElementById('camera-video');
+        video.srcObject = stream;
+        await video.play();
+
+        document.getElementById('cam-placeholder').style.display   = 'none';
+        document.getElementById('cam-guide').style.display         = 'flex';
+        document.getElementById('cam-label').style.display         = 'block';
+        document.getElementById('cam-controls-start').style.display = 'none';
+
+        const live = document.getElementById('cam-controls-live');
+        live.style.display = 'flex';
+        live.style.gap     = '16px';
+        live.style.alignItems = 'center';
+
+        toast('Camera started', 'success');
+      } catch (err) {
+        toast(`Camera error: ${err.message}`, 'error');
+      }
+    }
+
+    function stopCamera() {
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+      const video = document.getElementById('camera-video');
+      video.srcObject = null;
+
+      document.getElementById('cam-placeholder').style.display    = 'flex';
+      document.getElementById('cam-guide').style.display          = 'none';
+      document.getElementById('cam-label').style.display          = 'none';
+      document.getElementById('cam-controls-live').style.display  = 'none';
+      document.getElementById('cam-controls-start').style.display = 'block';
+    }
+
+    async function flipCamera() {
+      facingMode = facingMode === 'user' ? 'environment' : 'user';
+      await startCamera();
+    }
+
+    function capturePhoto() {
+      const video  = document.getElementById('camera-video');
+      const canvas = document.getElementById('camera-canvas');
+      if (!stream || !video.videoWidth) { toast('Camera not ready', 'error'); return; }
+
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Mirror for front camera
+      if (facingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0);
+
+      // Flash
+      const flash = document.getElementById('cam-flash');
+      flash.classList.remove('flash');
+      void flash.offsetWidth;
+      flash.classList.add('flash');
+
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const id  = nextId();
+        capturedPhotos.push({ blob, url, id });
+        addCapturedThumb(url, id);
+        document.getElementById('cam-analyze-row').style.display = 'block';
+        toast(`Photo captured (${capturedPhotos.length})`, 'success');
+      }, 'image/jpeg', 0.92);
+    }
+
+    function addCapturedThumb(url, id) {
+      const strip = document.getElementById('captured-strip');
+      const img   = document.createElement('img');
+      img.className = 'captured-thumb';
+      img.src = url;
+      img.title = `Capture ${id}`;
+      strip.appendChild(img);
+      strip.scrollLeft = strip.scrollWidth;
+    }
+
+    function clearCaptured() {
+      capturedPhotos = [];
+      document.getElementById('captured-strip').innerHTML = '';
+      document.getElementById('cam-analyze-row').style.display = 'none';
+    }
+
+    async function analyzeCaptured() {
+      if (capturedPhotos.length === 0) { toast('Take at least one photo first', 'error'); return; }
+
+      const btn = document.getElementById('cam-analyze-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<div class="badge-spinner" style="width:18px;height:18px;border-color:rgba(255,255,255,0.3);border-top-color:white;"></div> Analyzing…`;
+
+      startProgress();
+      analysisResults = [];
+
+      for (let i = 0; i < capturedPhotos.length; i++) {
+        const { blob, url, id } = capturedPhotos[i];
+        const file = new File([blob], `capture-${id}.jpg`, { type: 'image/jpeg' });
+        const result = await analyzeOne(file, url, id, `Capture ${i + 1}`);
+        analysisResults.push({ id, url, name: `Capture ${i + 1}`, ...result });
+      }
+
+      finishProgress();
+      renderResults(analysisResults);
+
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        Analyze Captures`;
+    }
+
+    /* ── Results rendering ───────────────────────────────────────────── */
+    function renderResults(results) {
+      const section   = document.getElementById('results-section');
+      const cardsEl   = document.getElementById('result-cards');
+      const subtitle  = document.getElementById('results-subtitle');
+      const now       = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      section.style.display = 'block';
+      cardsEl.innerHTML     = '';
+
+      const successful = results.filter(r => r.ok);
+      const failed     = results.filter(r => !r.ok);
+
+      subtitle.textContent = `${results.length} image${results.length > 1 ? 's' : ''} analysed · ${now}`;
+
+      // Summary stats
+      if (successful.length > 0) {
+        const avgConf    = successful.reduce((s, r) => s + (r.confidence || 0), 0) / successful.length;
+        const sevCounts  = {};
+        successful.forEach(r => {
+          const s = r.label || r.severity || 'unknown';
+          sevCounts[s] = (sevCounts[s] || 0) + 1;
+        });
+        const dominant = Object.entries(sevCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+        document.getElementById('sum-total').textContent    = successful.length;
+        document.getElementById('sum-avg-conf').textContent = (avgConf * 100).toFixed(0) + '%';
+        document.getElementById('sum-dominant').textContent = dominant.charAt(0).toUpperCase() + dominant.slice(1);
+      }
+
+      // Per-image cards
+      results.forEach((r, i) => {
+        const card = document.createElement('div');
+        card.style.animationDelay = `${i * 0.08}s`;
+
+        if (!r.ok) {
+          card.className = 'result-card';
+          card.innerHTML = `
+            <div class="result-error">
+              <span style="font-size:1.5rem">⚠️</span>
+              <div>
+                <div style="font-weight:600; margin-bottom:2px;">${r.name}</div>
+                <div style="opacity:0.7">${r.error || 'Analysis failed'}</div>
+              </div>
+            </div>`;
+          cardsEl.appendChild(card);
+          return;
+        }
+
+        const sev     = (r.label || r.severity || 'unknown').toLowerCase();
+        const conf    = (r.confidence || 0);
+        const confPct = (conf * 100).toFixed(1);
+        const probs   = r.all_probabilities || {};
+        const uncertain = r.uncertain || conf < 0.60;
+
+        const sevClass = { clear: 'sev-clear', mild: 'sev-mild', moderate: 'sev-moderate', severe: 'sev-severe' }[sev] || '';
+
+        const probItems = Object.entries(probs).map(([cls, val]) => `
+          <div class="prob-item ${cls === sev ? 'dominant' : ''}">
+            <div class="prob-label">${cls}</div>
+            <div class="prob-val">${(val * 100).toFixed(0)}%</div>
+          </div>`).join('');
+
+        card.className = 'result-card';
+        card.innerHTML = `
+          <div class="result-image">
+            <img src="${r.url}" alt="${r.name}" loading="lazy" />
+            <div class="severity-ribbon ${sevClass}">${sev}</div>
+          </div>
+          <div class="result-body">
+            <div class="result-filename">${r.name}</div>
+            <div class="result-severity">${sev.charAt(0).toUpperCase() + sev.slice(1)}</div>
+            <div class="conf-row">
+              <div class="conf-bar-track">
+                <div class="conf-bar-fill" style="width:0%" data-target="${confPct}"></div>
+              </div>
+              <span class="conf-pct">${confPct}%</span>
+            </div>
+            ${probItems ? `<div class="prob-grid">${probItems}</div>` : ''}
+            ${uncertain ? `<div class="uncertain-badge">⚠ Low confidence — result may be uncertain</div>` : ''}
+            ${r.note && r.note !== 'Valid' ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:2px;">ℹ ${r.note}</div>` : ''}
+          </div>`;
+
+        cardsEl.appendChild(card);
+      });
+
+      // Animate confidence bars
+      setTimeout(() => {
+        document.querySelectorAll('.conf-bar-fill').forEach(bar => {
+          bar.style.width = bar.dataset.target + '%';
+        });
+      }, 100);
+
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  </script>
+</body>
+</html>

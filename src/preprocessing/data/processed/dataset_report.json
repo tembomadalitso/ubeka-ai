@@ -1,0 +1,25 @@
+{
+  "acne": {
+    "total_raw": 0,
+    "rejected": {
+      "blurry": 0,
+      "too_small": 0,
+      "bad_brightness": 0
+    },
+    "saved": {
+      "train": {},
+      "val": {}
+    },
+    "face_detection": {
+      "cascade": 0,
+      "fallback": 0
+    },
+    "skin_tone_distribution": {}
+  },
+  "celeba": {
+    "status": "skipped"
+  },
+  "fitzpatrick": {
+    "status": "skipped"
+  }
+}

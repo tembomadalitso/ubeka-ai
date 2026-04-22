@@ -1,0 +1,51 @@
+{
+  "summary": {
+    "confidence_range": 0.0633,
+    "uncertainty_range": 12.33,
+    "bias_flag": "moderate"
+  },
+  "groups": [
+    {
+      "group": "Light Skin (Group 1)",
+      "n_images": 7165,
+      "mean_confidence": 0.6421,
+      "std_confidence": 0.1774,
+      "uncertain_pct": 44.65,
+      "mean_ita": 30.52,
+      "prediction_distribution": {
+        "clear": 949,
+        "mild": 3165,
+        "moderate": 968,
+        "severe": 2083
+      }
+    },
+    {
+      "group": "Medium Skin (Group 2)",
+      "n_images": 4501,
+      "mean_confidence": 0.6731,
+      "std_confidence": 0.1865,
+      "uncertain_pct": 39.88,
+      "mean_ita": 17.9,
+      "prediction_distribution": {
+        "clear": 592,
+        "mild": 2485,
+        "moderate": 423,
+        "severe": 1001
+      }
+    },
+    {
+      "group": "Dark Skin (Group 3)",
+      "n_images": 1743,
+      "mean_confidence": 0.6098,
+      "std_confidence": 0.1761,
+      "uncertain_pct": 52.21,
+      "mean_ita": -2.22,
+      "prediction_distribution": {
+        "clear": 264,
+        "mild": 778,
+        "moderate": 173,
+        "severe": 528
+      }
+    }
+  ]
+}
