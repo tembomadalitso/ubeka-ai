@@ -53,7 +53,7 @@ UPLOAD_DIR = Path("/tmp/ubeka_uploads")
 UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
 
 # ── Model paths (prefer calibrated) ───────────────────────────────────────────
-CALIBRATED_PATH = project_root / "models" / "acne_efficientnet_calibrated.pth"
+CALIBRATED_PATH = project_root / "models" / "model.pth"
 MODEL_PATH      = project_root / "models" / "model.pth"
 
 active_model_path = CALIBRATED_PATH if CALIBRATED_PATH.exists() else MODEL_PATH
